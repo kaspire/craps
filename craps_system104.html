@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System 104 — Craps Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a1f;
+    --surface2: #1e242b;
+    --border: #2a3040;
+    --border2: #3a4454;
+    --text: #e8edf2;
+    --muted: #7a8a9a;
+    --lay: #ff4d4d;
+    --lay-dim: #3d1a1a;
+    --lay-mid: #cc3333;
+    --back: #22c97e;
+    --back-dim: #0d2e1e;
+    --back-mid: #1a9e62;
+    --gold: #f0b429;
+    --gold-dim: #2e2208;
+    --seven: #e24b4a;
+    --seven-dim: #2e1212;
+    --accent: #4a9eff;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  header {
+    width: 100%;
+    padding: 1.5rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: .08em;
+  }
+
+  .logo span {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: .85rem;
+    letter-spacing: .04em;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 860px;
+    padding: 1.5rem 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Alert */
+  .alert {
+    display: none;
+    background: linear-gradient(135deg, #0d2e1e, #163d28);
+    border: 1px solid var(--back-mid);
+    border-radius: var(--radius);
+    padding: .75rem 1.2rem;
+    font-size: .85rem;
+    color: var(--back);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .04em;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { border-color: var(--back-mid); }
+    50% { border-color: var(--back); }
+  }
+
+  /* Metrics row */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .9rem 1rem;
+  }
+
+  .metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .metric-value {
+    font-size: 1.4rem;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .metric-value.pos { color: var(--back); }
+  .metric-value.neg { color: var(--lay); }
+  .metric-value.neutral { color: var(--text); }
+
+  /* Bet cards */
+  .bet-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .bet-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem 1.2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bet-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--lay), var(--back));
+  }
+
+  .bet-card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: .75rem;
+    letter-spacing: .06em;
+  }
+
+  .bet-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: .9rem;
+  }
+
+  .bet-type {
+    width: 36px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-align: center;
+  }
+
+  .lay-tag { background: var(--lay-dim); color: var(--lay); }
+  .back-tag { background: var(--back-dim); color: var(--back); }
+
+  .bet-amount {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .lay-amount { color: var(--lay); }
+  .back-amount { color: var(--back); }
+
+  .step-badge {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: .04em;
+  }
+
+  .step-lay { background: var(--lay-dim); color: var(--lay); }
+  .step-back { background: var(--back-dim); color: var(--back); }
+
+  /* Dice buttons */
+  .dice-section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .dice-grid {
+    display: grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .dice-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .95rem;
+    font-weight: 500;
+    padding: 10px 4px;
+    cursor: pointer;
+    transition: all .12s;
+    text-align: center;
+  }
+
+  .dice-btn:hover { background: var(--surface2); border-color: var(--border2); color: var(--text); }
+  .dice-btn:active { transform: scale(.96); }
+
+  .dice-btn.key-green {
+    background: var(--back-dim);
+    border-color: var(--back-mid);
+    color: var(--back);
+    font-weight: 600;
+  }
+
+  .dice-btn.key-green:hover { background: #183d28; }
+
+  .dice-btn.key-seven {
+    background: var(--seven-dim);
+    border-color: #a33;
+    color: var(--seven);
+    font-weight: 600;
+  }
+
+  .dice-btn.key-seven:hover { background: #3d1515; }
+
+  /* Action buttons */
+  .actions { display: flex; gap: 8px; }
+
+  .btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: all .12s;
+    letter-spacing: .02em;
+  }
+
+  .btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .btn:active { transform: scale(.98); }
+
+  .btn.danger {
+    border-color: #6b2020;
+    color: #e06060;
+  }
+
+  .btn.danger:hover { background: var(--lay-dim); border-color: var(--lay-mid); }
+
+  /* History */
+  .history-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .history-header {
+    padding: .65rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .history-list {
+    max-height: 240px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .h-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 1.2rem;
+    border-bottom: 1px solid var(--border);
+    font-size: .82rem;
+    transition: background .1s;
+  }
+
+  .h-row:last-child { border-bottom: none; }
+  .h-row:hover { background: var(--surface2); }
+
+  .h-die {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .h-die.green { background: var(--back-dim); color: var(--back); }
+  .h-die.red { background: var(--seven-dim); color: var(--seven); }
+  .h-die.gray { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+  .h-desc { flex: 1; color: var(--muted); line-height: 1.3; }
+  .h-desc em { font-style: normal; color: var(--text); }
+
+  .h-pnl {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    font-weight: 500;
+    min-width: 54px;
+    text-align: right;
+  }
+
+  .h-pnl.pos { color: var(--back); }
+  .h-pnl.neg { color: var(--lay); }
+
+  .h-bal {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    font-weight: 600;
+    min-width: 64px;
+    text-align: right;
+    color: var(--text);
+  }
+
+  .empty-state {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: .85rem;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .04em;
+  }
+
+  /* Unit settings */
+  .settings-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .settings-header {
+    padding: .6rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .settings-header:hover { background: var(--surface2); }
+
+  .settings-toggle {
+    font-size: .75rem;
+    color: var(--muted);
+    transition: transform .2s;
+  }
+
+  .settings-body {
+    padding: 1rem 1.2rem;
+    display: none;
+    gap: 1rem;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .settings-body.open {
+    display: grid;
+  }
+
+  .unit-field { display: flex; flex-direction: column; gap: 6px; }
+
+  .unit-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .unit-label.lay-lbl { color: var(--lay); }
+  .unit-label.back-lbl { color: var(--back); }
+
+  .unit-input-row { display: flex; align-items: center; gap: 8px; }
+
+  .unit-input {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 7px 10px;
+    width: 100px;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .unit-input:focus { border-color: var(--gold); }
+
+  .unit-hint {
+    font-size: .75rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .apply-btn {
+    background: var(--gold-dim);
+    border: 1px solid #6b4d0a;
+    border-radius: var(--radius);
+    color: var(--gold);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all .12s;
+    letter-spacing: .04em;
+    margin-top: .5rem;
+    grid-column: span 2;
+    justify-self: start;
+  }
+
+  .apply-btn:hover { background: #3d2c0a; }
+
+  /* Progression summary */
+  .prog-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .prog-header {
+    padding: .6rem 1.2rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--muted);
+  }
+
+  .prog-body {
+    padding: .85rem 1.2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .prog-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem 1rem;
+  }
+
+  .prog-card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: .06em;
+    margin-bottom: .6rem;
+  }
+
+  .prog-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: .82rem;
+  }
+
+  .prog-row:last-child { margin-bottom: 0; }
+
+  .prog-side {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .prog-level {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+
+  .prog-exposure {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .78rem;
+    color: var(--muted);
+  }
+
+  @media (max-width: 540px) {
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .dice-grid { grid-template-columns: repeat(6, 1fr); }
+    .settings-body { grid-template-columns: 1fr; }
+    .apply-btn { grid-column: span 1; }
+    .prog-body { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">SYSTEM 104 <span>— Craps Bot</span></div>
+</header>
+
+<div class="container">
+
+  <div class="alert" id="alertBox">⬆ New high reached — Bankroll Reset possible. Return to 1 unit on all.</div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Balance</div>
+      <div class="metric-value neutral" id="mBal">$0</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Highest</div>
+      <div class="metric-value pos" id="mHigh">$0</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Lowest</div>
+      <div class="metric-value neg" id="mLow">$0</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Rolls</div>
+      <div class="metric-value neutral" id="mRolls">0</div>
+    </div>
+  </div>
+
+  <div class="bet-cards">
+    <div class="bet-card">
+      <div class="bet-card-title">Point 4</div>
+      <div class="bet-row">
+        <span class="bet-type lay-tag">LAY</span>
+        <span class="bet-amount lay-amount" id="lay4">$40</span>
+        <span class="step-badge step-lay" id="slay4">Step 0</span>
+      </div>
+      <div class="bet-row">
+        <span class="bet-type back-tag">BACK</span>
+        <span class="bet-amount back-amount" id="back4">$20</span>
+        <span class="step-badge step-back" id="sback4">Step 0</span>
+      </div>
+    </div>
+    <div class="bet-card">
+      <div class="bet-card-title">Point 10</div>
+      <div class="bet-row">
+        <span class="bet-type lay-tag">LAY</span>
+        <span class="bet-amount lay-amount" id="lay10">$40</span>
+        <span class="step-badge step-lay" id="slay10">Step 0</span>
+      </div>
+      <div class="bet-row">
+        <span class="bet-type back-tag">BACK</span>
+        <span class="bet-amount back-amount" id="back10">$20</span>
+        <span class="step-badge step-back" id="sback10">Step 0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-wrap">
+    <div class="settings-header" onclick="toggleSettings()">
+      <span>Unit settings</span>
+      <span class="settings-toggle" id="settingsToggle">&#9656; expand</span>
+    </div>
+    <div class="settings-body" id="settingsBody">
+      <div class="unit-field">
+        <div class="unit-label lay-lbl">Lay — 1 unit ($)</div>
+        <input class="unit-input" type="number" id="inputLayUnit" min="1" step="1" value="40">
+        <div class="unit-hint">e.g. $40 = Lay starts at $40</div>
+      </div>
+      <div class="unit-field">
+        <div class="unit-label back-lbl">Back — 1 unit ($)</div>
+        <input class="unit-input" type="number" id="inputBackUnit" min="1" step="1" value="20">
+        <div class="unit-hint">e.g. $20 = Back starts at $20</div>
+      </div>
+      <button class="apply-btn" onclick="applyUnits()">Apply &amp; Reset game</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="dice-section-label">Roll result</div>
+    <div class="dice-grid" id="diceGrid"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" onclick="undo()">↩ Undo</button>
+    <button class="btn danger" onclick="doReset()">↺ Reset</button>
+  </div>
+
+  <div class="prog-wrap">
+    <div class="prog-header">Progression levels</div>
+    <div class="prog-body">
+      <div class="prog-card">
+        <div class="prog-card-title">Point 4</div>
+        <div class="prog-row">
+          <span class="prog-side lay-tag">LAY</span>
+          <span class="prog-level lay-amount" id="plLay4">Step 0</span>
+          <span class="prog-exposure" id="peLay4">$40</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-side back-tag">BACK</span>
+          <span class="prog-level back-amount" id="plBack4">Step 0</span>
+          <span class="prog-exposure" id="peBack4">$20</span>
+        </div>
+      </div>
+      <div class="prog-card">
+        <div class="prog-card-title">Point 10</div>
+        <div class="prog-row">
+          <span class="prog-side lay-tag">LAY</span>
+          <span class="prog-level lay-amount" id="plLay10">Step 0</span>
+          <span class="prog-exposure" id="peLay10">$40</span>
+        </div>
+        <div class="prog-row">
+          <span class="prog-side back-tag">BACK</span>
+          <span class="prog-level back-amount" id="plBack10">Step 0</span>
+          <span class="prog-exposure" id="peBack10">$20</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-wrap">
+    <div class="history-header">
+      <span>Roll history</span>
+      <span id="hCount">—</span>
+    </div>
+    <div class="history-list" id="histList">
+      <div class="empty-state">No rolls yet — press a number above</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let LAY_UNIT = 40, BACK_UNIT = 20;
+
+let state = {
+  balance: 0, highest: 0, lowest: 0,
+  lay4: 40, back4: 20, stepLay4: 0, stepBack4: 0,
+  lay10: 40, back10: 20, stepLay10: 0, stepBack10: 0,
+  rolls: 0, history: [], snapshots: []
+};
+
+function snap() { return JSON.parse(JSON.stringify(state)); }
+
+function freshState() {
+  return {
+    balance: 0, highest: 0, lowest: 0,
+    lay4: LAY_UNIT, back4: BACK_UNIT, stepLay4: 0, stepBack4: 0,
+    lay10: LAY_UNIT, back10: BACK_UNIT, stepLay10: 0, stepBack10: 0,
+    rolls: 0, history: [], snapshots: []
+  };
+}
+
+function toggleSettings() {
+  const body = document.getElementById('settingsBody');
+  const tog = document.getElementById('settingsToggle');
+  const open = body.classList.toggle('open');
+  tog.innerHTML = open ? '&#9662; collapse' : '&#9656; expand';
+}
+
+function applyUnits() {
+  const lu = parseInt(document.getElementById('inputLayUnit').value);
+  const bu = parseInt(document.getElementById('inputBackUnit').value);
+  if (!lu || lu < 1 || !bu || bu < 1) { alert('Please enter valid unit values greater than 0.'); return; }
+  if (!confirm('Apply new units and reset game?')) return;
+  LAY_UNIT = lu;
+  BACK_UNIT = bu;
+  state = freshState();
+  document.getElementById('alertBox').style.display = 'none';
+  const body = document.getElementById('settingsBody');
+  const tog = document.getElementById('settingsToggle');
+  body.classList.remove('open');
+  tog.innerHTML = '&#9656; expand';
+  render();
+}
+
+function roll(n) {
+  state.snapshots.push(snap());
+  state.rolls++;
+  let pnl = 0, desc = '';
+
+  if (n === 7) {
+    const lw4 = Math.round(state.lay4 * 0.5);
+    const lw10 = Math.round(state.lay10 * 0.5);
+    const bl = state.back4 + state.back10;
+    pnl = lw4 + lw10 - bl;
+    state.stepBack4++; state.back4 += BACK_UNIT;
+    state.stepBack10++; state.back10 += BACK_UNIT;
+    if (state.stepLay4 > 0) { state.stepLay4--; state.lay4 -= LAY_UNIT; }
+    if (state.stepLay10 > 0) { state.stepLay10--; state.lay10 -= LAY_UNIT; }
+    desc = `Lay wins <em>(+$${lw4+lw10})</em>, Back loses <em>(-$${bl})</em> — Back steps up`;
+  } else if (n === 4) {
+    const bw = state.back4;
+    const ll = state.lay4;
+    pnl = bw - ll;
+    state.stepLay4++; state.lay4 += LAY_UNIT;
+    if (state.stepBack4 > 0) { state.stepBack4--; state.back4 -= BACK_UNIT; }
+    desc = `Back 4 wins <em>(+$${bw})</em>, Lay 4 loses <em>(-$${ll})</em> — Lay 4 steps up`;
+  } else if (n === 10) {
+    const bw = state.back10;
+    const ll = state.lay10;
+    pnl = bw - ll;
+    state.stepLay10++; state.lay10 += LAY_UNIT;
+    if (state.stepBack10 > 0) { state.stepBack10--; state.back10 -= BACK_UNIT; }
+    desc = `Back 10 wins <em>(+$${bw})</em>, Lay 10 loses <em>(-$${ll})</em> — Lay 10 steps up`;
+  } else {
+    desc = `No action on ${n}`;
+  }
+
+  state.balance += pnl;
+  const isNewHigh = state.balance > state.highest && state.rolls > 1 && pnl > 0;
+  if (state.balance > state.highest) state.highest = state.balance;
+  if (state.balance < state.lowest) state.lowest = state.balance;
+
+  state.history.unshift({ n, desc, pnl, bal: state.balance });
+
+  document.getElementById('alertBox').style.display = isNewHigh ? 'block' : 'none';
+  render();
+}
+
+function undo() {
+  if (!state.snapshots.length) return;
+  state = state.snapshots.pop();
+  document.getElementById('alertBox').style.display = 'none';
+  render();
+}
+
+function doReset() {
+  if (!confirm('Reset everything to base units?')) return;
+  state = freshState();
+  document.getElementById('alertBox').style.display = 'none';
+  render();
+}
+
+function fmt(v) {
+  const abs = Math.abs(v).toLocaleString('en-US');
+  return (v < 0 ? '-$' : '$') + abs;
+}
+
+function render() {
+  const bal = state.balance;
+  const mb = document.getElementById('mBal');
+  mb.textContent = fmt(bal);
+  mb.className = 'metric-value ' + (bal > 0 ? 'pos' : bal < 0 ? 'neg' : 'neutral');
+
+  document.getElementById('mHigh').textContent = fmt(state.highest);
+  document.getElementById('mLow').textContent = fmt(state.lowest);
+  document.getElementById('mRolls').textContent = state.rolls;
+
+  document.getElementById('lay4').textContent = '$' + state.lay4;
+  document.getElementById('back4').textContent = '$' + state.back4;
+  document.getElementById('lay10').textContent = '$' + state.lay10;
+  document.getElementById('back10').textContent = '$' + state.back10;
+  document.getElementById('slay4').textContent = 'Step ' + state.stepLay4;
+  document.getElementById('sback4').textContent = 'Step ' + state.stepBack4;
+  document.getElementById('slay10').textContent = 'Step ' + state.stepLay10;
+  document.getElementById('sback10').textContent = 'Step ' + state.stepBack10;
+
+  // Progression panel
+  document.getElementById('plLay4').textContent = 'Step ' + state.stepLay4;
+  document.getElementById('plBack4').textContent = 'Step ' + state.stepBack4;
+  document.getElementById('plLay10').textContent = 'Step ' + state.stepLay10;
+  document.getElementById('plBack10').textContent = 'Step ' + state.stepBack10;
+  document.getElementById('peLay4').textContent = '$' + state.lay4 + ' on table';
+  document.getElementById('peBack4').textContent = '$' + state.back4 + ' on table';
+  document.getElementById('peLay10').textContent = '$' + state.lay10 + ' on table';
+  document.getElementById('peBack10').textContent = '$' + state.back10 + ' on table';
+
+  const hl = document.getElementById('histList');
+  document.getElementById('hCount').textContent = state.history.length ? state.history.length + ' rolls' : '—';
+
+  if (!state.history.length) {
+    hl.innerHTML = '<div class="empty-state">No rolls yet — press a number above</div>';
+    return;
+  }
+
+  hl.innerHTML = state.history.map(h => {
+    const cls = h.n === 7 ? 'red' : (h.n === 4 || h.n === 10) ? 'green' : 'gray';
+    const pnlStr = h.pnl !== 0
+      ? `<div class="h-pnl ${h.pnl > 0 ? 'pos' : 'neg'}">${h.pnl > 0 ? '+' : ''}$${Math.abs(h.pnl)}</div>`
+      : `<div class="h-pnl" style="color:var(--muted)">—</div>`;
+    return `<div class="h-row">
+      <div class="h-die ${cls}">${h.n}</div>
+      <div class="h-desc">${h.desc}</div>
+      ${pnlStr}
+      <div class="h-bal">${fmt(h.bal)}</div>
+    </div>`;
+  }).join('');
+}
+
+// Build dice buttons
+const grid = document.getElementById('diceGrid');
+for (let i = 2; i <= 12; i++) {
+  const b = document.createElement('button');
+  b.className = 'dice-btn' + (i === 4 || i === 10 ? ' key-green' : i === 7 ? ' key-seven' : '');
+  b.textContent = i;
+  b.onclick = () => roll(i);
+  grid.appendChild(b);
+}
+
+render();
+</script>
+</body>
+</html>
