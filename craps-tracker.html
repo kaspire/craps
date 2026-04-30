@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Craps Roll Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e8e4d9;
+    --muted: #666;
+    --green: #2d6a4f;
+    --green-bright: #52b788;
+    --green-dim: #1b3f2f;
+    --amber: #b5621e;
+    --amber-bright: #e07c3a;
+    --red: #8b2020;
+    --red-bright: #d94040;
+    --red-dim: #3d1111;
+    --accent: #c9a84c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: .08em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .05em;
+  }
+
+  .main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .block { margin-bottom: 28px; }
+
+  /* Roll buttons */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 7px;
+  }
+
+  .rb {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: .05em;
+    padding: 14px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s, border-color .15s, transform .08s;
+  }
+
+  .rb:hover { background: var(--surface2); border-color: #444; }
+  .rb:active { transform: scale(.95); }
+
+  .rb.r7 {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green-bright);
+  }
+  .rb.r7:hover { background: #1f4a35; }
+
+  .rb.undo-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border-style: dashed;
+  }
+
+  /* Alert */
+  .alert {
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 12px;
+    letter-spacing: .04em;
+    display: none;
+    margin-bottom: 20px;
+    border: 1px solid;
+  }
+  .alert.warn { background: var(--red-dim); border-color: var(--red); color: #f08080; display: block; }
+  .alert.ok   { background: var(--green-dim); border-color: var(--green); color: var(--green-bright); display: block; }
+
+  /* Streak bar */
+  .streak-bar-wrap { margin-bottom: 20px; }
+  .streak-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .streak-meta strong { color: var(--text); font-weight: 500; }
+  .streak-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .streak-fill  { height: 100%; border-radius: 3px; transition: width .3s, background .3s; }
+
+  /* Stat grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px; }
+  .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: .04em; color: var(--text); }
+  .stat-val.green { color: var(--green-bright); }
+  .stat-val.amber { color: var(--amber-bright); }
+  .stat-val.red   { color: var(--red-bright); }
+
+  /* Place bets */
+  .place-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .place-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: border-color .2s, background .2s;
+  }
+  .place-card.warm  { background: #1a1200; border-color: var(--amber); }
+  .place-card.cold  { background: var(--red-dim); border-color: var(--red); }
+
+  .place-num  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .04em; color: var(--text); }
+  .place-lbl  { font-size: 9px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin: 2px 0; }
+  .place-since{ font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--muted); }
+  .place-card.warm  .place-since { color: var(--amber-bright); }
+  .place-card.cold  .place-since { color: var(--red-bright); }
+  .place-card.warm  .place-num   { color: var(--amber-bright); }
+  .place-card.cold  .place-num   { color: var(--red-bright); }
+
+  .lay-badge {
+    font-size: 9px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    opacity: 0;
+  }
+  .place-card.cold .lay-badge { background: var(--red); color: #ffaaaa; opacity: 1; }
+  .place-card.warm .lay-badge { background: var(--amber); color: #ffe0a0; opacity: 1; }
+
+  /* Seven stats */
+  .seven-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .seven-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .seven-row:last-child { border-bottom: none; }
+  .seven-row .lbl { color: var(--muted); }
+  .seven-row .val { font-weight: 500; color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: .04em; }
+  .seven-row .val.accent { color: var(--accent); }
+
+  /* History */
+  .history-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 38px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .pill {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: .04em;
+    border: 1px solid;
+  }
+  .pill.p7    { background: var(--green-dim); color: var(--green-bright); border-color: var(--green); }
+  .pill.poth  { background: #1a0000; color: #cc6666; border-color: #4d1a1a; }
+  .pill.new   { animation: pop .18s ease; }
+  @keyframes pop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+  /* Controls */
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ctrl {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: .04em;
+    transition: border-color .1s, color .1s;
+  }
+  .ctrl:hover { border-color: #444; color: var(--text); }
+
+  .empty-note { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Craps Roll Tracker</h1>
+  <span>streak alert &amp; lay bet advisor</span>
+</header>
+
+<div class="main">
+
+  <div class="block">
+    <div class="section-label">Enter roll</div>
+    <div class="btn-grid">
+      <button class="rb" onclick="add(2)">2</button>
+      <button class="rb" onclick="add(3)">3</button>
+      <button class="rb" onclick="add(4)">4</button>
+      <button class="rb" onclick="add(5)">5</button>
+      <button class="rb" onclick="add(6)">6</button>
+      <button class="rb r7" onclick="add(7)">7</button>
+      <button class="rb" onclick="add(8)">8</button>
+      <button class="rb" onclick="add(9)">9</button>
+      <button class="rb" onclick="add(10)">10</button>
+      <button class="rb" onclick="add(11)">11</button>
+      <button class="rb" onclick="add(12)">12</button>
+      <button class="rb undo-btn" onclick="undo()">&#8617; undo</button>
+    </div>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div class="streak-bar-wrap">
+    <div class="streak-meta">
+      <span>Non-7 streak</span>
+      <strong id="streakLabel">0 / 10</strong>
+    </div>
+    <div class="streak-track">
+      <div class="streak-fill" id="streakFill" style="width:0%;background:var(--green-bright)"></div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-lbl">Total rolls</div><div class="stat-val" id="sTotal">0</div></div>
+    <div class="stat"><div class="stat-lbl">Sevens</div><div class="stat-val green" id="sSevens">0</div></div>
+    <div class="stat"><div class="stat-lbl">Current streak</div><div class="stat-val" id="sStreak">0</div></div>
+    <div class="stat"><div class="stat-lbl">Longest streak</div><div class="stat-val" id="sLongest">0</div></div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Place bets — rolls since last hit &nbsp;&#9650; lay targets</div>
+    <div class="place-grid" id="placeGrid"></div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">7-out analysis — after 10+ non-7 streak</div>
+    <div class="seven-table">
+      <div class="seven-row"><span class="lbl">Times 10+ streak reached</span><span class="val accent" id="a7Times">0</span></div>
+      <div class="seven-row"><span class="lbl">Avg rolls after threshold to hit 7</span><span class="val" id="a7Avg">—</span></div>
+      <div class="seven-row"><span class="lbl">Fastest 7 after threshold</span><span class="val" id="a7Min">—</span></div>
+      <div class="seven-row"><span class="lbl">Slowest 7 after threshold</span><span class="val" id="a7Max">—</span></div>
+      <div class="seven-row"><span class="lbl">Current wait (rolls since threshold)</span><span class="val" id="a7Wait">—</span></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Roll history (last 40)</div>
+    <div class="history-row" id="histRow">
+      <span class="empty-note">No rolls yet — tap a number above</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl" onclick="resetAll()">Reset session</button>
+    <button class="ctrl" onclick="bulkImport()">Bulk import</button>
+  </div>
+
+</div>
+
+<script>
+const PLACES = [4, 5, 6, 8, 9, 10];
+const THRESHOLD = 10;
+
+let rolls = [];
+let placeSince = {};
+let sevenEvents = [];
+let thresholdReachedAt = -1;
+let inThresholdWatch = false;
+let alertFired = false;
+
+PLACES.forEach(p => placeSince[p] = 0);
+
+function add(n) {
+  rolls.push(n);
+
+  if (PLACES.includes(n)) {
+    placeSince[n] = 0;
+    PLACES.forEach(p => { if (p !== n) placeSince[p]++; });
+  } else if (n === 7) {
+    PLACES.forEach(p => placeSince[p] = 0);
+    if (inThresholdWatch) {
+      sevenEvents.push(rolls.length - thresholdReachedAt);
+      inThresholdWatch = false;
+      thresholdReachedAt = -1;
+    }
+  } else {
+    PLACES.forEach(p => placeSince[p]++);
+  }
+
+  const streak = getStreak();
+  if (streak >= THRESHOLD && !inThresholdWatch) {
+    inThresholdWatch = true;
+    thresholdReachedAt = rolls.length;
+  }
+
+  render();
+}
+
+function undo() {
+  if (!rolls.length) return;
+  rolls.pop();
+  rebuildState();
+  render();
+}
+
+function rebuildState() {
+  PLACES.forEach(p => placeSince[p] = 0);
+  sevenEvents = [];
+  thresholdReachedAt = -1;
+  inThresholdWatch = false;
+  alertFired = false;
+
+  const tmp = rolls.slice();
+  rolls = [];
+  let streak = 0;
+
+  tmp.forEach(n => {
+    rolls.push(n);
+    if (PLACES.includes(n)) {
+      placeSince[n] = 0;
+      PLACES.forEach(p => { if (p !== n) placeSince[p]++; });
+      streak++;
+    } else if (n === 7) {
+      PLACES.forEach(p => placeSince[p] = 0);
+      if (inThresholdWatch) {
+        sevenEvents.push(rolls.length - thresholdReachedAt);
+        inThresholdWatch = false;
+        thresholdReachedAt = -1;
+      }
+      streak = 0;
+    } else {
+      PLACES.forEach(p => placeSince[p]++);
+      streak++;
+    }
+    if (streak >= THRESHOLD && !inThresholdWatch) {
+      inThresholdWatch = true;
+      thresholdReachedAt = rolls.length;
+    }
+  });
+}
+
+function getStreak() {
+  let s = 0;
+  for (let i = rolls.length - 1; i >= 0; i--) {
+    if (rolls[i] !== 7) s++; else break;
+  }
+  return s;
+}
+
+function getLongest() {
+  let max = 0, cur = 0;
+  rolls.forEach(r => { if (r !== 7) { cur++; if (cur > max) max = cur; } else cur = 0; });
+  return max;
+}
+
+function render() {
+  const streak = getStreak();
+  const longest = getLongest();
+  const sevens = rolls.filter(r => r === 7).length;
+
+  document.getElementById('sTotal').textContent = rolls.length;
+  document.getElementById('sSevens').textContent = sevens;
+  document.getElementById('sStreak').textContent = streak;
+  document.getElementById('sLongest').textContent = longest;
+  document.getElementById('streakLabel').textContent = streak + ' / ' + THRESHOLD;
+
+  const pct = Math.min(streak / THRESHOLD * 100, 100);
+  const fill = document.getElementById('streakFill');
+  fill.style.width = pct + '%';
+  fill.style.background = streak >= THRESHOLD ? '#d94040' : streak >= 7 ? '#e07c3a' : '#52b788';
+
+  const sc = document.getElementById('sStreak');
+  sc.className = 'stat-val' + (streak >= THRESHOLD ? ' red' : streak >= 7 ? ' amber' : '');
+
+  const ab = document.getElementById('alertBox');
+  if (streak >= THRESHOLD) {
+    ab.className = 'alert warn';
+    ab.textContent = '⚠  ' + streak + ' non-7 rolls in a row. Seven is overdue — consider lay bets on cold numbers below.';
+    if (!alertFired) { alertFired = true; beep(); }
+  } else {
+    alertFired = false;
+    if (rolls.length && rolls[rolls.length - 1] === 7) {
+      ab.className = 'alert ok';
+      ab.textContent = '✓  Seven rolled — streak reset to zero.';
+    } else {
+      ab.className = 'alert';
+    }
+  }
+
+  const pg = document.getElementById('placeGrid');
+  pg.innerHTML = '';
+  PLACES.forEach(p => {
+    const c = placeSince[p];
+    const cls = c >= 10 ? 'cold' : c >= 5 ? 'warm' : '';
+    const badge = c >= 10 ? 'Lay target' : c >= 5 ? 'Watch' : '';
+    const d = document.createElement('div');
+    d.className = 'place-card ' + cls;
+    d.innerHTML =
+      '<div class="place-num">' + p + '</div>' +
+      '<div class="place-lbl">since hit</div>' +
+      '<div class="place-since">' + c + '</div>' +
+      '<div class="lay-badge">' + badge + '</div>';
+    pg.appendChild(d);
+  });
+
+  const times = sevenEvents.length;
+  const waitEl = document.getElementById('a7Wait');
+  document.getElementById('a7Times').textContent = times + (inThresholdWatch ? ' +current' : '');
+  if (times > 0) {
+    const avg = sevenEvents.reduce((a, b) => a + b, 0) / times;
+    document.getElementById('a7Avg').textContent = avg.toFixed(1) + ' rolls';
+    document.getElementById('a7Min').textContent = Math.min(...sevenEvents) + ' rolls';
+    document.getElementById('a7Max').textContent = Math.max(...sevenEvents) + ' rolls';
+  } else {
+    document.getElementById('a7Avg').textContent = '—';
+    document.getElementById('a7Min').textContent = '—';
+    document.getElementById('a7Max').textContent = '—';
+  }
+  waitEl.textContent = inThresholdWatch ? (rolls.length - thresholdReachedAt) + ' rolls' : '—';
+
+  const hr = document.getElementById('histRow');
+  if (!rolls.length) {
+    hr.innerHTML = '<span class="empty-note">No rolls yet — tap a number above</span>';
+    return;
+  }
+  hr.innerHTML = '';
+  if (rolls.length > 40) {
+    const m = document.createElement('span');
+    m.className = 'empty-note';
+    m.style.marginRight = '6px';
+    m.textContent = '+' + (rolls.length - 40) + ' earlier  ';
+    hr.appendChild(m);
+  }
+  rolls.slice(-40).forEach((r, i, arr) => {
+    const p = document.createElement('div');
+    p.className = 'pill ' + (r === 7 ? 'p7' : 'poth');
+    if (i === arr.length - 1) p.classList.add('new');
+    p.textContent = r;
+    hr.appendChild(p);
+  });
+}
+
+function resetAll() {
+  if (!confirm('Reset all roll data?')) return;
+  rolls = [];
+  PLACES.forEach(p => placeSince[p] = 0);
+  sevenEvents = [];
+  thresholdReachedAt = -1;
+  inThresholdWatch = false;
+  alertFired = false;
+  render();
+}
+
+function bulkImport() {
+  const s = prompt('Paste roll numbers separated by spaces or commas:\nExample: 10 10 11 8 3 8 7 6 5 6 9');
+  if (!s) return;
+  const nums = s.split(/[\s,]+/).map(Number).filter(n => n >= 2 && n <= 12);
+  if (nums.length) nums.forEach(n => add(n));
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [440, 550, 660, 550, 440].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f; o.type = 'sine';
+      const t = ctx.currentTime + i * 0.14;
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+      o.start(t); o.stop(t + 0.14);
+    });
+  } catch (e) {}
+}
+
+render();
+</script>
+</body>
+</html>
