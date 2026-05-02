@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Craps Roll Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e8e4d9;
+    --muted: #666;
+    --green: #2d6a4f;
+    --green-bright: #52b788;
+    --green-dim: #1b3f2f;
+    --amber: #b5621e;
+    --amber-bright: #e07c3a;
+    --red: #8b2020;
+    --red-bright: #d94040;
+    --red-dim: #3d1111;
+    --accent: #c9a84c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 28px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: .08em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .05em;
+  }
+
+  .main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .block { margin-bottom: 28px; }
+
+  /* Roll buttons */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 7px;
+  }
+
+  .rb {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: .05em;
+    padding: 14px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .1s, border-color .15s, transform .08s;
+  }
+
+  .rb:hover { background: var(--surface2); border-color: #444; }
+  .rb:active { transform: scale(.95); }
+
+  .rb.r7 {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green-bright);
+  }
+  .rb.r7:hover { background: #1f4a35; }
+
+  .rb.undo-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border-style: dashed;
+  }
+
+  /* Alert */
+  .alert {
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 12px;
+    letter-spacing: .04em;
+    display: none;
+    margin-bottom: 20px;
+    border: 1px solid;
+  }
+  .alert.warn { background: var(--red-dim); border-color: var(--red); color: #f08080; display: block; }
+  .alert.ok   { background: var(--green-dim); border-color: var(--green); color: var(--green-bright); display: block; }
+
+  /* Streak bar */
+  .streak-bar-wrap { margin-bottom: 20px; }
+  .streak-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .streak-meta strong { color: var(--text); font-weight: 500; }
+  .streak-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .streak-fill  { height: 100%; border-radius: 3px; transition: width .3s, background .3s; }
+
+  /* Stat grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .stat-lbl { font-size: 10px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 5px; }
+  .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: .04em; color: var(--text); }
+  .stat-val.green { color: var(--green-bright); }
+  .stat-val.amber { color: var(--amber-bright); }
+  .stat-val.red   { color: var(--red-bright); }
+
+  /* Place bets */
+  .place-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .place-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+    transition: border-color .2s, background .2s;
+  }
+  .place-card.warm  { background: #1a1200; border-color: var(--amber); }
+  .place-card.cold  { background: var(--red-dim); border-color: var(--red); }
+
+  .place-num  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .04em; color: var(--text); }
+  .place-lbl  { font-size: 9px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; margin: 2px 0; }
+  .place-since{ font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--muted); }
+  .place-card.warm  .place-since { color: var(--amber-bright); }
+  .place-card.cold  .place-since { color: var(--red-bright); }
+  .place-card.warm  .place-num   { color: var(--amber-bright); }
+  .place-card.cold  .place-num   { color: var(--red-bright); }
+
+  .lay-badge {
+    font-size: 9px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    opacity: 0;
+  }
+  .place-card.cold .lay-badge { background: var(--red); color: #ffaaaa; opacity: 1; }
+  .place-card.warm .lay-badge { background: var(--amber); color: #ffe0a0; opacity: 1; }
+
+  /* Seven stats */
+  .seven-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .seven-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .seven-row:last-child { border-bottom: none; }
+  .seven-row .lbl { color: var(--muted); }
+  .seven-row .val { font-weight: 500; color: var(--text); font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: .04em; }
+  .seven-row .val.accent { color: var(--accent); }
+
+  /* History */
+  .history-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 38px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .pill {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: .04em;
+    border: 1px solid;
+  }
+  .pill.p7    { background: var(--green-dim); color: var(--green-bright); border-color: var(--green); }
+  .pill.poth  { background: #1a0000; color: #cc6666; border-color: #4d1a1a; }
+  .pill.new   { animation: pop .18s ease; }
+  @keyframes pop { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+  /* Controls */
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ctrl {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 16px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: .04em;
+    transition: border-color .1s, color .1s;
+  }
+  .ctrl:hover { border-color: #444; color: var(--text); }
+
+  .empty-note { font-size: 11px; color: var(--muted); }
+
+  .bet-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .bet-controls label { font-size: 11px; color: var(--muted); letter-spacing: .05em; }
+  .bet-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 7px 10px;
+    width: 90px;
+  }
+  .bet-input:focus { outline: none; border-color: var(--accent); }
+  .strategy-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .stab {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: .03em;
+    transition: all .1s;
+  }
+  .stab.active { border-color: var(--accent); color: var(--accent); background: #1a1400; }
+  .bet-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .bet-table th {
+    font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); padding: 6px 10px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .bet-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .bet-table tr:last-child td { border-bottom: none; }
+  .bet-table tr.total-row td { color: var(--accent); font-weight: 500; border-top: 1px solid var(--border); }
+  .bet-table .pos { color: var(--green-bright); }
+  .bet-table .neg { color: var(--red-bright); }
+  .bet-table .neut { color: var(--muted); }
+  .bet-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .bsum { background: var(--surface2); border-radius: 5px; padding: 10px 12px; text-align: center; }
+  .bsum-lbl { font-size: 9px; color: var(--muted); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px; }
+  .bsum-val { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .04em; }
+
+  /* Distribution chart */
+  .dist-wrap { margin-bottom: 28px; }
+  .dist-chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; margin: 12px 0 4px; }
+  .dist-bar-wrap { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+  .dist-bar {
+    width: 100%; border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height .3s;
+    position: relative;
+  }
+  .dist-bar.zone-safe   { background: var(--green); }
+  .dist-bar.zone-hot    { background: var(--red); }
+  .dist-bar.zone-warm   { background: var(--amber); }
+  .dist-bar.zone-cur    { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dist-bar-label { font-size: 9px; color: var(--muted); margin-top: 4px; letter-spacing: .03em; }
+  .dist-bar-count { font-size: 8px; color: var(--muted); margin-bottom: 2px; }
+  .dist-legend { display: flex; gap: 16px; font-size: 10px; color: var(--muted); flex-wrap: wrap; margin-top: 6px; }
+  .dist-legend span::before { content: '■ '; }
+  .dist-legend .lg { color: var(--green-bright); }
+  .dist-legend .la { color: var(--amber-bright); }
+  .dist-legend .lr { color: var(--red-bright); }
+  .dist-legend .lc { color: var(--accent); }
+  .dist-prob-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; }
+  .dist-prob-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 10px; font-size: 11px;
+  }
+  .dist-prob-chip .dpc-val { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); letter-spacing: .04em; }
+  .dist-prob-chip .dpc-lbl { font-size: 9px; color: var(--muted); letter-spacing: .04em; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Craps Roll Tracker</h1>
+  <span>streak alert &amp; lay bet advisor</span>
+</header>
+
+<div class="main">
+
+  <div class="block">
+    <div class="section-label">Enter roll</div>
+    <div class="btn-grid">
+      <button class="rb" onclick="add(2)">2</button>
+      <button class="rb" onclick="add(3)">3</button>
+      <button class="rb" onclick="add(4)">4</button>
+      <button class="rb" onclick="add(5)">5</button>
+      <button class="rb" onclick="add(6)">6</button>
+      <button class="rb r7" onclick="add(7)">7</button>
+      <button class="rb" onclick="add(8)">8</button>
+      <button class="rb" onclick="add(9)">9</button>
+      <button class="rb" onclick="add(10)">10</button>
+      <button class="rb" onclick="add(11)">11</button>
+      <button class="rb" onclick="add(12)">12</button>
+      <button class="rb undo-btn" onclick="undo()">&#8617; undo</button>
+    </div>
+  </div>
+
+  <div id="alertBox" class="alert"></div>
+
+  <div class="streak-bar-wrap">
+    <div class="streak-meta">
+      <span>Non-7 streak</span>
+      <strong id="streakLabel">0 / 10</strong>
+    </div>
+    <div class="streak-track">
+      <div class="streak-fill" id="streakFill" style="width:0%;background:var(--green-bright)"></div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-lbl">Total rolls</div><div class="stat-val" id="sTotal">0</div></div>
+    <div class="stat"><div class="stat-lbl">Sevens</div><div class="stat-val green" id="sSevens">0</div></div>
+    <div class="stat"><div class="stat-lbl">Current streak</div><div class="stat-val" id="sStreak">0</div></div>
+    <div class="stat"><div class="stat-lbl">Longest streak</div><div class="stat-val" id="sLongest">0</div></div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Place bets — rolls since last hit &nbsp;&#9650; lay targets</div>
+    <div class="place-grid" id="placeGrid"></div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">7-out analysis — after 10+ non-7 streak</div>
+    <div class="seven-table">
+      <div class="seven-row"><span class="lbl">Times 10+ streak reached</span><span class="val accent" id="a7Times">0</span></div>
+      <div class="seven-row"><span class="lbl">Avg rolls after threshold to hit 7</span><span class="val" id="a7Avg">—</span></div>
+      <div class="seven-row"><span class="lbl">Fastest 7 after threshold</span><span class="val" id="a7Min">—</span></div>
+      <div class="seven-row"><span class="lbl">Slowest 7 after threshold</span><span class="val" id="a7Max">—</span></div>
+      <div class="seven-row"><span class="lbl">Current wait (rolls since threshold)</span><span class="val" id="a7Wait">—</span></div>
+    </div>
+  </div>
+
+  <div class="block dist-wrap">
+    <div class="section-label">7 distribution — which roll number did the 7 fall on?</div>
+    <div class="dist-chart" id="distChart">
+      <div style="font-size:11px;color:var(--muted);align-self:center">No sevens logged yet</div>
+    </div>
+    <div class="dist-legend">
+      <span class="lg">Rolls 1–10 (early)</span>
+      <span class="la">Rolls 11–20 (mid)</span>
+      <span class="lr">Rolls 21+ (late — high probability zone)</span>
+      <span class="lc">Current streak position</span>
+    </div>
+    <div class="dist-prob-row" id="distProbRow"></div>
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.7">
+      Each bar = one roll number. Height = how many sevens landed there across all shooters.
+      The taller the bar at roll 21+, the more confident you can be staying in late.
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Sleeper analysis — hits per number before each 7</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:10px">
+      <table class="bet-table">
+        <thead>
+          <tr>
+            <th>Number</th>
+            <th>Shooters</th>
+            <th>Avg hits</th>
+            <th>Best run</th>
+            <th>Worst run</th>
+            <th>Rating</th>
+          </tr>
+        </thead>
+        <tbody id="sleeperTbody"></tbody>
+      </table>
+    </div>
+    <div style="font-size:10px;color:var(--muted);line-height:1.7">
+      How many times each number hit per shooter before the 7. Lower avg = safer lay. <span style="color:var(--green-bright)">★ = session best sleeper.</span>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Roll history (last 40)</div>
+    <div class="history-row" id="histRow">
+      <span class="empty-note">No rolls yet — tap a number above</span>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="section-label">Lay bet calculator — enter your chip size</div>
+    <div class="bet-controls">
+      <label>Chip size</label>
+      <input class="bet-input" type="number" id="chipSize" value="10" min="1" oninput="renderCalc()">
+      <div class="strategy-tabs">
+        <button class="stab active" onclick="setStrategy('flat')" id="stab-flat">Flat 1 chip</button>
+        <button class="stab" onclick="setStrategy('4and10')" id="stab-4and10">4 &amp; 10 only</button>
+        <button class="stab" onclick="setStrategy('double')" id="stab-double">Double after loss</button>
+        <button class="stab" onclick="toggleDropRule()" id="stab-drop">Drop on 2nd hit</button>
+      </div>
+    </div>
+    <div id="dropWarning" style="display:none;font-size:11px;padding:8px 12px;margin-bottom:10px;background:#1a0d00;border:1px solid var(--amber);border-radius:5px;color:var(--amber-bright);letter-spacing:.03em"></div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <table class="bet-table">
+        <thead>
+          <tr>
+            <th>Number</th>
+            <th>Bet placed</th>
+            <th>Win if 7 hits</th>
+            <th>Lose if # hits</th>
+            <th>House edge</th>
+            <th>Rolls since hit</th>
+          </tr>
+        </thead>
+        <tbody id="betTbody"></tbody>
+      </table>
+    </div>
+    <div class="bet-summary">
+      <div class="bsum"><div class="bsum-lbl">Total at risk</div><div class="bsum-val" id="bTotalRisk">—</div></div>
+      <div class="bsum"><div class="bsum-lbl">Win if 7 now</div><div class="bsum-val pos" id="bWinAll">—</div></div>
+      <div class="bsum"><div class="bsum-lbl">Max single loss</div><div class="bsum-val neg" id="bMaxLoss">—</div></div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.7">
+      Lay bets pay true odds minus 5% vig on winnings. 4/10 pay 1:2, 5/9 pay 2:3, 6/8 pay 5:6.<br>
+      <span style="color:var(--accent)">Strategy:</span> enter after 10 non-7 rolls, exit at 15 or when 7 hits.
+      <span style="color:var(--amber-bright)">Drop on 2nd hit</span> removes a number after it hits twice in your window.
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl" onclick="resetAll()">Reset session</button>
+    <button class="ctrl" onclick="bulkImport()">Bulk import</button>
+  </div>
+
+</div>
+
+<script>
+const PLACES = [4, 5, 6, 8, 9, 10];
+const THRESHOLD = 10;
+
+let rolls = [];
+let placeSince = {};
+let sevenEvents = [];
+let thresholdReachedAt = -1;
+let inThresholdWatch = false;
+let alertFired = false;
+
+// Sleeper tracking
+let currentShooterHits = {};
+let sleeperHistory = [];
+
+// 7 distribution — track which roll number each 7 fell on per shooter
+let sevenAtRoll = {};      // { rollNum: count }
+let shooterRollCount = 0;  // rolls in current shooter (resets on 7)
+
+PLACES.forEach(p => { placeSince[p] = 0; currentShooterHits[p] = 0; });
+
+function add(n) {
+  rolls.push(n);
+  shooterRollCount++;
+
+  if (PLACES.includes(n)) {
+    placeSince[n] = 0;
+    currentShooterHits[n]++;
+    PLACES.forEach(p => { if (p !== n) placeSince[p]++; });
+  } else if (n === 7) {
+    // Log distribution — which roll number did this 7 fall on?
+    const r = shooterRollCount;
+    sevenAtRoll[r] = (sevenAtRoll[r] || 0) + 1;
+    // Log sleeper snapshot
+    sleeperHistory.push({ ...currentShooterHits });
+    PLACES.forEach(p => { placeSince[p] = 0; currentShooterHits[p] = 0; });
+    shooterRollCount = 0;
+    if (inThresholdWatch) {
+      sevenEvents.push(rolls.length - thresholdReachedAt);
+      inThresholdWatch = false;
+      thresholdReachedAt = -1;
+    }
+  } else {
+    PLACES.forEach(p => placeSince[p]++);
+  }
+
+  const streak = getStreak();
+  if (streak >= THRESHOLD && !inThresholdWatch) {
+    inThresholdWatch = true;
+    thresholdReachedAt = rolls.length;
+  }
+
+  render();
+}
+
+function undo() {
+  if (!rolls.length) return;
+  rolls.pop();
+  rebuildState();
+  render();
+}
+
+function rebuildState() {
+  PLACES.forEach(p => { placeSince[p] = 0; currentShooterHits[p] = 0; });
+  sevenEvents = [];
+  sleeperHistory = [];
+  sevenAtRoll = {};
+  shooterRollCount = 0;
+  thresholdReachedAt = -1;
+  inThresholdWatch = false;
+  alertFired = false;
+
+  const tmp = rolls.slice();
+  rolls = [];
+  let streak = 0;
+
+  tmp.forEach(n => {
+    rolls.push(n);
+    shooterRollCount++;
+    if (PLACES.includes(n)) {
+      placeSince[n] = 0;
+      currentShooterHits[n]++;
+      PLACES.forEach(p => { if (p !== n) placeSince[p]++; });
+      streak++;
+    } else if (n === 7) {
+      const r = shooterRollCount;
+      sevenAtRoll[r] = (sevenAtRoll[r] || 0) + 1;
+      sleeperHistory.push({ ...currentShooterHits });
+      PLACES.forEach(p => { placeSince[p] = 0; currentShooterHits[p] = 0; });
+      shooterRollCount = 0;
+      if (inThresholdWatch) {
+        sevenEvents.push(rolls.length - thresholdReachedAt);
+        inThresholdWatch = false;
+        thresholdReachedAt = -1;
+      }
+      streak = 0;
+    } else {
+      PLACES.forEach(p => placeSince[p]++);
+      streak++;
+    }
+    if (streak >= THRESHOLD && !inThresholdWatch) {
+      inThresholdWatch = true;
+      thresholdReachedAt = rolls.length;
+    }
+  });
+}
+
+function getStreak() {
+  let s = 0;
+  for (let i = rolls.length - 1; i >= 0; i--) {
+    if (rolls[i] !== 7) s++; else break;
+  }
+  return s;
+}
+
+function getLongest() {
+  let max = 0, cur = 0;
+  rolls.forEach(r => { if (r !== 7) { cur++; if (cur > max) max = cur; } else cur = 0; });
+  return max;
+}
+
+function render() {
+  const streak = getStreak();
+  const longest = getLongest();
+  const sevens = rolls.filter(r => r === 7).length;
+
+  document.getElementById('sTotal').textContent = rolls.length;
+  document.getElementById('sSevens').textContent = sevens;
+  document.getElementById('sStreak').textContent = streak;
+  document.getElementById('sLongest').textContent = longest;
+  document.getElementById('streakLabel').textContent = streak + ' / ' + THRESHOLD;
+
+  const pct = Math.min(streak / THRESHOLD * 100, 100);
+  const fill = document.getElementById('streakFill');
+  fill.style.width = pct + '%';
+  fill.style.background = streak >= THRESHOLD ? '#d94040' : streak >= 7 ? '#e07c3a' : '#52b788';
+
+  const sc = document.getElementById('sStreak');
+  sc.className = 'stat-val' + (streak >= THRESHOLD ? ' red' : streak >= 7 ? ' amber' : '');
+
+  const ab = document.getElementById('alertBox');
+  if (streak >= THRESHOLD) {
+    ab.className = 'alert warn';
+    ab.textContent = '⚠  ' + streak + ' non-7 rolls in a row. Seven is overdue — consider lay bets on cold numbers below.';
+    if (!alertFired) { alertFired = true; beep(); }
+  } else {
+    alertFired = false;
+    if (rolls.length && rolls[rolls.length - 1] === 7) {
+      ab.className = 'alert ok';
+      ab.textContent = '✓  Seven rolled — streak reset to zero.';
+    } else {
+      ab.className = 'alert';
+    }
+  }
+
+  const pg = document.getElementById('placeGrid');
+  pg.innerHTML = '';
+  PLACES.forEach(p => {
+    const c = placeSince[p];
+    const cls = c >= 10 ? 'cold' : c >= 5 ? 'warm' : '';
+    const badge = c >= 10 ? 'Lay target' : c >= 5 ? 'Watch' : '';
+    const d = document.createElement('div');
+    d.className = 'place-card ' + cls;
+    d.innerHTML =
+      '<div class="place-num">' + p + '</div>' +
+      '<div class="place-lbl">since hit</div>' +
+      '<div class="place-since">' + c + '</div>' +
+      '<div class="lay-badge">' + badge + '</div>';
+    pg.appendChild(d);
+  });
+
+  const times = sevenEvents.length;
+  const waitEl = document.getElementById('a7Wait');
+  document.getElementById('a7Times').textContent = times + (inThresholdWatch ? ' +current' : '');
+  if (times > 0) {
+    const avg = sevenEvents.reduce((a, b) => a + b, 0) / times;
+    document.getElementById('a7Avg').textContent = avg.toFixed(1) + ' rolls';
+    document.getElementById('a7Min').textContent = Math.min(...sevenEvents) + ' rolls';
+    document.getElementById('a7Max').textContent = Math.max(...sevenEvents) + ' rolls';
+  } else {
+    document.getElementById('a7Avg').textContent = '—';
+    document.getElementById('a7Min').textContent = '—';
+    document.getElementById('a7Max').textContent = '—';
+  }
+  waitEl.textContent = inThresholdWatch ? (rolls.length - thresholdReachedAt) + ' rolls' : '—';
+
+  const hr = document.getElementById('histRow');
+  if (!rolls.length) {
+    hr.innerHTML = '<span class="empty-note">No rolls yet — tap a number above</span>';
+    return;
+  }
+  hr.innerHTML = '';
+  if (rolls.length > 40) {
+    const m = document.createElement('span');
+    m.className = 'empty-note';
+    m.style.marginRight = '6px';
+    m.textContent = '+' + (rolls.length - 40) + ' earlier  ';
+    hr.appendChild(m);
+  }
+  rolls.slice(-40).forEach((r, i, arr) => {
+    const p = document.createElement('div');
+    p.className = 'pill ' + (r === 7 ? 'p7' : 'poth');
+    if (i === arr.length - 1) p.classList.add('new');
+    p.textContent = r;
+    hr.appendChild(p);
+  });
+
+  if (typeof renderCalc === 'function') renderCalc();
+  renderSleeper();
+  renderDist();
+}
+
+function renderDist() {
+  const chart = document.getElementById('distChart');
+  const probRow = document.getElementById('distProbRow');
+  if (!chart) return;
+
+  const keys = Object.keys(sevenAtRoll).map(Number);
+  if (keys.length === 0) {
+    chart.innerHTML = '<div style="font-size:11px;color:var(--muted);align-self:center">No sevens logged yet</div>';
+    probRow.innerHTML = '';
+    return;
+  }
+
+  const maxRoll = Math.max(...keys, 25); // always show at least to roll 25
+  const maxCount = Math.max(...Object.values(sevenAtRoll), 1);
+  const totalSevens = Object.values(sevenAtRoll).reduce((a,b)=>a+b,0);
+  const curRoll = shooterRollCount; // current shooter's roll count
+
+  chart.innerHTML = '';
+
+  for (let r = 1; r <= maxRoll; r++) {
+    const count = sevenAtRoll[r] || 0;
+    const pct = count / maxCount * 100;
+    const isCur = r === curRoll;
+
+    // Zone coloring
+    let zone = r <= 10 ? 'zone-safe' : r <= 20 ? 'zone-warm' : 'zone-hot';
+    if (isCur) zone = 'zone-cur';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'dist-bar-wrap';
+    wrap.title = 'Roll ' + r + ': ' + count + ' seven' + (count !== 1 ? 's' : '');
+
+    const countLbl = document.createElement('div');
+    countLbl.className = 'dist-bar-count';
+    countLbl.textContent = count > 0 ? count : '';
+
+    const bar = document.createElement('div');
+    bar.className = 'dist-bar ' + zone;
+    bar.style.height = (count > 0 ? Math.max(pct, 4) : 2) + '%';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'dist-bar-label';
+    lbl.textContent = r % 5 === 0 || r === 1 ? r : '';
+
+    wrap.appendChild(countLbl);
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    chart.appendChild(wrap);
+  }
+
+  // Probability chips — "if at roll N, % chance 7 comes within 5 rolls"
+  probRow.innerHTML = '';
+  const checkpoints = [10, 15, 20, 21, 22, 25];
+  checkpoints.forEach(cp => {
+    if (cp > maxRoll) return;
+    // Count sevens that fell within cp to cp+4
+    let hits = 0;
+    for (let r = cp; r <= cp + 4; r++) hits += (sevenAtRoll[r] || 0);
+    const pct = totalSevens > 0 ? Math.round(hits / totalSevens * 100) : 0;
+    const chip = document.createElement('div');
+    chip.className = 'dist-prob-chip';
+    chip.innerHTML =
+      '<div class="dpc-val">' + pct + '%</div>' +
+      '<div class="dpc-lbl">7 on rolls ' + cp + '–' + (cp+4) + '</div>';
+    probRow.appendChild(chip);
+  });
+}
+
+function renderSleeper() {
+  const tbody = document.getElementById('sleeperTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const n = sleeperHistory.length;
+  if (n === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="6" class="neut" style="text-align:center;padding:14px">No completed shooters yet — logged after each 7</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+
+  // Compute stats per place number
+  const stats = {};
+  PLACES.forEach(p => {
+    const allHits = sleeperHistory.map(s => s[p]);
+    const avg = allHits.reduce((a,b)=>a+b,0) / n;
+    const best = Math.min(...allHits);
+    const worst = Math.max(...allHits);
+    // Also track current shooter's live hits
+    const live = currentShooterHits[p];
+    stats[p] = { avg, best, worst, live };
+  });
+
+  // Find best sleeper = lowest avg hits
+  const bestAvg = Math.min(...PLACES.map(p => stats[p].avg));
+
+  // Sort by avg ascending so best sleepers are at top
+  const sorted = [...PLACES].sort((a, b) => stats[a].avg - stats[b].avg);
+
+  sorted.forEach((p, i) => {
+    const s = stats[p];
+    const isBest = s.avg === bestAvg;
+    const tr = document.createElement('tr');
+    if (isBest) tr.style.background = 'rgba(82,183,136,0.07)';
+
+    const avgColor = s.avg <= 1 ? 'var(--green-bright)' : s.avg <= 2 ? '' : s.avg <= 3 ? 'var(--amber-bright)' : 'var(--red-bright)';
+    const rating = isBest ? '★ Best' : i === sorted.length - 1 ? '✗ Worst' : '—';
+    const ratingColor = isBest ? 'var(--green-bright)' : i === sorted.length - 1 ? 'var(--red-bright)' : 'var(--muted)';
+
+    tr.innerHTML =
+      '<td style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:.04em;color:' + (isBest ? 'var(--green-bright)' : 'var(--text)') + '">' + p +
+        (s.live > 0 ? '<span style="font-size:9px;margin-left:5px;color:var(--amber-bright)">+' + s.live + ' live</span>' : '') + '</td>' +
+      '<td class="neut">' + n + '</td>' +
+      '<td style="color:' + avgColor + ';font-weight:500">' + s.avg.toFixed(2) + '</td>' +
+      '<td class="pos">' + s.best + ' hit' + (s.best !== 1 ? 's' : '') + '</td>' +
+      '<td class="neg">' + s.worst + ' hit' + (s.worst !== 1 ? 's' : '') + '</td>' +
+      '<td style="color:' + ratingColor + ';font-weight:500">' + rating + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function resetAll() {
+  if (!confirm('Reset all roll data?')) return;
+  rolls = [];
+  PLACES.forEach(p => { placeSince[p] = 0; currentShooterHits[p] = 0; });
+  sevenEvents = [];
+  sleeperHistory = [];
+  sevenAtRoll = {};
+  shooterRollCount = 0;
+  thresholdReachedAt = -1;
+  inThresholdWatch = false;
+  alertFired = false;
+  render();
+}
+
+function bulkImport() {
+  const s = prompt('Paste roll numbers separated by spaces or commas:\nExample: 10 10 11 8 3 8 7 6 5 6 9');
+  if (!s) return;
+  const nums = s.split(/[\s,]+/).map(Number).filter(n => n >= 2 && n <= 12);
+  if (nums.length) nums.forEach(n => add(n));
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [440, 550, 660, 550, 440].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = f; o.type = 'sine';
+      const t = ctx.currentTime + i * 0.14;
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+      o.start(t); o.stop(t + 0.14);
+    });
+  } catch (e) {}
+}
+
+render();
+
+// ── Bet Calculator ───────────────────────────────────────
+const LAY_SPECS = {
+  4:  { ratio: 1/2, edge: 2.44 },
+  5:  { ratio: 2/3, edge: 3.23 },
+  6:  { ratio: 5/6, edge: 4.00 },
+  8:  { ratio: 5/6, edge: 4.00 },
+  9:  { ratio: 2/3, edge: 3.23 },
+  10: { ratio: 1/2, edge: 2.44 }
+};
+
+let strategy = 'flat';
+let layLosses = { 4:0, 5:0, 6:0, 8:0, 9:0, 10:0 };
+let dropRuleOn = false;
+// Tracks how many times 4 and 10 have hit since the streak threshold
+let hitsSinceThreshold = { 4:0, 10:0 };
+let droppedNums = { 4:false, 10:false };
+let wasInThreshold = false;
+
+function toggleDropRule() {
+  dropRuleOn = !dropRuleOn;
+  document.getElementById('stab-drop').classList.toggle('active', dropRuleOn);
+  renderCalc();
+}
+
+function setStrategy(s) {
+  strategy = s;
+  ['flat','4and10','double'].forEach(k => {
+    document.getElementById('stab-' + k).classList.toggle('active', k === s);
+  });
+  renderCalc();
+}
+
+// Called from main render() to sync drop tracking with roll state
+function syncDropTracking() {
+  const streak = getStreak();
+  const inWindow = streak >= THRESHOLD;
+
+  // Reset counters when a 7 hits (streak drops to 0)
+  if (!inWindow && wasInThreshold) {
+    hitsSinceThreshold = { 4:0, 10:0 };
+    droppedNums = { 4:false, 10:false };
+  }
+  wasInThreshold = inWindow;
+
+  // Check last roll — if it's 4 or 10 and we're in window, count it
+  if (inWindow && rolls.length > 0) {
+    const last = rolls[rolls.length - 1];
+    if (last === 4 || last === 10) {
+      hitsSinceThreshold[last]++;
+      if (dropRuleOn && hitsSinceThreshold[last] >= 2) {
+        droppedNums[last] = true;
+      }
+    }
+  }
+}
+
+function getBetAmount(num, chip) {
+  // If drop rule is on and this number is dropped, skip it
+  if (dropRuleOn && (num === 4 || num === 10) && droppedNums[num]) return 0;
+
+  if (strategy === 'flat') return chip;
+  if (strategy === '4and10') return (num === 4 || num === 10) ? chip : 0;
+  if (strategy === 'double') return chip * Math.pow(2, layLosses[num] || 0);
+  return chip;
+}
+
+function renderCalc() {
+  syncDropTracking();
+
+  const chip = parseFloat(document.getElementById('chipSize').value) || 10;
+  const tbody = document.getElementById('betTbody');
+  tbody.innerHTML = '';
+  let totalRisk = 0, totalWin = 0, maxLoss = 0;
+
+  // Show drop warning if any number is dropped
+  const dropWarn = document.getElementById('dropWarning');
+  const dropped = [4, 10].filter(n => droppedNums[n]);
+  if (dropRuleOn && dropped.length > 0) {
+    dropWarn.style.display = 'block';
+    dropWarn.textContent = '⚠  ' + dropped.join(' and ') + ' dropped — hit twice in this window. Laying ' +
+      [4,10].filter(n => !droppedNums[n]).join(' only') + ' only.';
+  } else if (dropRuleOn && hitsSinceThreshold[4] === 1 && !droppedNums[4]) {
+    dropWarn.style.display = 'block';
+    dropWarn.textContent = '↑  4 hit once this window — one more hit drops it.';
+  } else if (dropRuleOn && hitsSinceThreshold[10] === 1 && !droppedNums[10]) {
+    dropWarn.style.display = 'block';
+    dropWarn.textContent = '↑  10 hit once this window — one more hit drops it.';
+  } else {
+    dropWarn.style.display = 'none';
+  }
+
+  PLACES.forEach(num => {
+    const spec = LAY_SPECS[num];
+    const bet = getBetAmount(num, chip);
+    const isDropped = dropRuleOn && (num === 4 || num === 10) && droppedNums[num];
+    const hits = (num === 4 || num === 10) ? hitsSinceThreshold[num] : null;
+
+    if (bet === 0) {
+      const hitsText = hits !== null ? hits + 'x hit' : '—';
+      const hitsColor = isDropped ? 'var(--red-bright)' : 'var(--muted)';
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td style="color:var(--muted)">' + num + (isDropped ? ' <span style="font-size:9px;background:var(--red);color:#ffaaaa;padding:1px 5px;border-radius:3px;letter-spacing:.05em">DROPPED</span>' : '') + '</td>' +
+        '<td class="neut">—</td><td class="neut">—</td><td class="neut">—</td>' +
+        '<td class="neut">' + spec.edge.toFixed(2) + '%</td>' +
+        '<td style="color:' + hitsColor + '">' + (hits !== null ? hitsText : placeSince[num]) + '</td>';
+      tbody.appendChild(tr);
+      return;
+    }
+
+    const winAmt = +(bet * spec.ratio * 0.95).toFixed(2);
+    totalRisk += bet;
+    totalWin += winAmt;
+    if (bet > maxLoss) maxLoss = bet;
+
+    const coldCls = placeSince[num] >= 10 ? 'neg' : placeSince[num] >= 5 ? '' : 'neut';
+    const hitsInfo = hits !== null && dropRuleOn
+      ? '<span style="font-size:9px;color:' + (hits > 0 ? 'var(--amber-bright)' : 'var(--muted)') + '"> (' + hits + 'x)</span>'
+      : '';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:.04em">' + num + hitsInfo + '</td>' +
+      '<td>' + bet.toFixed(0) + '</td>' +
+      '<td class="pos">+' + winAmt.toFixed(2) + '</td>' +
+      '<td class="neg">-' + bet.toFixed(0) + '</td>' +
+      '<td class="neut">' + spec.edge.toFixed(2) + '%</td>' +
+      '<td class="' + coldCls + '">' + placeSince[num] + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  const tr = document.createElement('tr');
+  tr.className = 'total-row';
+  tr.innerHTML = '<td>Total</td><td>' + totalRisk.toFixed(0) + '</td><td class="pos">+' + totalWin.toFixed(2) + '</td><td class="neg">-' + maxLoss.toFixed(0) + ' (worst)</td><td></td><td></td>';
+  tbody.appendChild(tr);
+
+  document.getElementById('bTotalRisk').textContent = totalRisk.toFixed(0);
+  document.getElementById('bWinAll').textContent = '+' + totalWin.toFixed(2);
+  document.getElementById('bMaxLoss').textContent = '-' + maxLoss.toFixed(0);
+}
+
+renderCalc();
+</script>
+</body>
+</html>
